@@ -2,6 +2,7 @@ import logging
 import asyncio
 from datetime import datetime, timedelta, date, time as dtime
 from zoneinfo import ZoneInfo
+import os
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -21,11 +22,22 @@ logging.basicConfig(level=logging.INFO)
 load_dotenv()
 logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
+# --- Create Google credentials files if provided via env (Railway deploy) ---
+if settings.GCRED_JSON and not os.path.exists(settings.GCRED_PATH):
+    with open(settings.GCRED_PATH, "w") as f:
+        f.write(settings.GCRED_JSON)
+
+if settings.GTOKEN_JSON and not os.path.exists(settings.GTOKEN_PATH):
+    with open(settings.GTOKEN_PATH, "w") as f:
+        f.write(settings.GTOKEN_JSON)
+# ---------------------------------------------------------------------------
+
 TZ = ZoneInfo(settings.TZ)
 UTC = ZoneInfo("UTC")
 
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
+
 
 # --- Seed services (fixed list) ---
 SERVICES_SEED = [
