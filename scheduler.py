@@ -85,7 +85,7 @@ def setup_scheduler(bot) -> None:
     scheduler = AsyncIOScheduler(
         timezone=TZ,
         job_defaults={
-            "misfire_grace_time": 0,  # якщо пропустили час запуску — не наздоганяємо
+            "misfire_grace_time": 1,  # якщо пропустили час запуску — не наздоганяємо
             "coalesce": True
         },
     )
@@ -93,12 +93,12 @@ def setup_scheduler(bot) -> None:
     # ТЕСТ: щодня о 20:55 за локальною TZ — нагадування на завтра
     scheduler.add_job(
         _send_evening_reminders,
-        trigger=CronTrigger(hour=20, minute=57, timezone=TZ),
+        trigger=CronTrigger(hour=21, minute=2, timezone=TZ),
         args=[bot],
         kwargs={"target": "tomorrow"},
         id="evening_reminders_prod",
         replace_existing=True,
-        misfire_grace_time=0,  # додаткова гарантія, що catch-up не буде
+        misfire_grace_time=1,  # додаткова гарантія, що catch-up не буде
     )
 
     # (за потреби вмикай тест-щохвилини — але зараз вимкнено)
@@ -109,7 +109,7 @@ def setup_scheduler(bot) -> None:
     #     kwargs={"target": "today"},
     #     id="evening_reminders_test",
     #     replace_existing=True,
-    #     misfire_grace_time=0,
+    #     misfire_grace_time=1,
     # )
 
     scheduler.start()
