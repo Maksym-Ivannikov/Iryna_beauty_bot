@@ -93,7 +93,7 @@ def setup_scheduler(bot) -> None:
     # ТЕСТ: щодня о 20:55 за локальною TZ — нагадування на завтра
     scheduler.add_job(
         _send_evening_reminders,
-        trigger=CronTrigger(hour=23, minute=59, timezone=TZ),
+        trigger=CronTrigger(hour=20, minute=00, timezone=TZ),
         args=[bot],
         kwargs={"target": "tomorrow"},
         id="evening_reminders_prod",
