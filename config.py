@@ -11,13 +11,15 @@ class Settings:
     GCRED_PATH: str = os.getenv("GOOGLE_OAUTH_CREDENTIALS_PATH", "./credentials.json")
     GTOKEN_PATH: str = os.getenv("GOOGLE_OAUTH_TOKEN_PATH", "./token.json")
 
-    # Змінні середовища з JSON-рядками (для Railway)
+    # JSON із креденшалами (для Railway)
     GCRED_JSON: str = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
     GTOKEN_JSON: str = os.getenv("GOOGLE_TOKEN_JSON", "")
 
-    # Інші налаштування
+    # Інше
     TZ: str = os.getenv("TIMEZONE", "Europe/Bucharest")
     BOOKING_HORIZON_DAYS: int = int(os.getenv("BOOKING_HORIZON_DAYS", "30"))
 
+    # База даних (Volume)
+    DB_PATH: str = os.getenv("DB_PATH", "/data/beauty.db")
 
 settings = Settings()
