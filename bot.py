@@ -43,8 +43,8 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 SERVICES_SEED = [
     ("Корекція брів", 30),
     ("Корекція і фарбування брів", 60),
-    ("Корекція, фарбування і ламінування брів", 60),
-    ("Ламінування брів", 20),
+    ("Ламінування брів комплекс", 60),
+    ("Ламінування/освітлення брів", 30),
     ("Ламінування вій", 60),
     ("Перманентний макіяж брів", 150),
     ("Фарбування вій/брів", 15),
@@ -171,7 +171,7 @@ async def start_cmd(m: types.Message, state: FSMContext = None):
         first_name=m.from_user.first_name or None,
         last_name=m.from_user.last_name or None,
     )
-    await m.answer("Вітаю!👋 Я бот запису до майстра Ірини. Оберіть, будь ласка, дію:", reply_markup=main_kb())
+    await m.answer("Вітаю!👋 Я бот запису до майстра Ірини Брижик. Оберіть, будь ласка, дію:", reply_markup=main_kb())
 
 
 @dp.message_handler(Text(equals="ℹ️ Контакти"), state='*')
@@ -183,11 +183,11 @@ async def contacts_cmd(m: types.Message, state: FSMContext = None):
 Strada Ion Bogdan 18
 Верхній домофон 6
 https://maps.app.goo.gl/7AJXbvq1o9aeDUHR7?g_st=ipc
-Instagram: https://www.instagram.com/irina_bryzhyk?igsh=M2N5enF2MG53cjRs"""
+Instagram: https://www.instagram.com/bryzhyk.brows.bucharest?igsh=MXVxbTd0NDV5bTFscQ=="""
     )
 
 
-@dp.message_handler(Text(equals="👁️👁️ Записатися"), state='*')
+@dp.message_handler(Text(equals="🧚 Записатися"), state='*')
 async def book_cmd(m: types.Message, state: FSMContext):
     await state.finish()
     await BookingFlow.WaitingService.set()
@@ -396,7 +396,7 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
 
     await state.finish()
     when_str = start_local.strftime('%H:%M %d.%m.%Y')
-    await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]}.")
+    await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]} Гарного дня 🌷")
     await cq.answer()
 
 

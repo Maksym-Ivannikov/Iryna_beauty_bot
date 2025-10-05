@@ -4,7 +4,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 def main_kb():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     # одна кнопка в рядок, щоб текст не обрізався
-    kb.row(KeyboardButton("👁️👁️ Записатися"))
+    kb.row(KeyboardButton("🧚 Записатися"))
     kb.row(KeyboardButton("📅 Мої записи"))
     kb.row(KeyboardButton("ℹ️ Контакти"))
     return kb
