@@ -1,0 +1,27 @@
+# Python / venv / кеші
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Локальні дані та секрети
+.env
+.env.*
+*.db
+*.sqlite3
+credentials.json
+token.json
+gcal_ping.py
+oauth_bootstrap.py
+
+# Логи
+*.log
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
