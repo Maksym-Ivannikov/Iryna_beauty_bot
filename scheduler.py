@@ -16,7 +16,7 @@ scheduler: Optional[AsyncIOScheduler] = None
 
 async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
     """
-    target="tomorrow" — прод: нагадуємо про завтрашні записи (шлемо сьогодні о 20:00).
+    target="tomorrow" — прод: нагадуємо про завтрашні записи (шлемо сьогодні ввечері).
     target="today"    — тест: шукаємо сьогоднішні записи.
     """
     now_local = datetime.now(TZ)
@@ -77,27 +77,31 @@ async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
 
 
 def setup_scheduler(bot) -> None:
-    """Реєструє джоби в AsyncIOScheduler."""
+    """Реєструє джоби в AsyncIOScheduler (без catch-up після рестартів)."""
     global scheduler
     if scheduler is not None:
         return
 
     scheduler = AsyncIOScheduler(
         timezone=TZ,
-        job_defaults={"misfire_grace_time": 3600, "coalesce": True},
+        job_defaults={
+            "misfire_grace_time": 0,  # якщо пропустили час запуску — не наздоганяємо
+            "coalesce": True
+        },
     )
 
-    # ✅ Прод: щодня о 20:00 за локальною TZ — нагадування на завтра
+    # ТЕСТ: щодня о 20:55 за локальною TZ — нагадування на завтра
     scheduler.add_job(
         _send_evening_reminders,
-        trigger=CronTrigger(hour=20, minute=0, timezone=TZ),
+        trigger=CronTrigger(hour=20, minute=57, timezone=TZ),
         args=[bot],
         kwargs={"target": "tomorrow"},
         id="evening_reminders_prod",
         replace_existing=True,
+        misfire_grace_time=0,  # додаткова гарантія, що catch-up не буде
     )
 
-    # 🧪 Тест-джоба (за потреби)
+    # (за потреби вмикай тест-щохвилини — але зараз вимкнено)
     # scheduler.add_job(
     #     _send_evening_reminders,
     #     trigger=CronTrigger(minute="*/1", timezone=TZ),
@@ -105,12 +109,7 @@ def setup_scheduler(bot) -> None:
     #     kwargs={"target": "today"},
     #     id="evening_reminders_test",
     #     replace_existing=True,
+    #     misfire_grace_time=0,
     # )
 
     scheduler.start()
-
-    # (опційно) якщо сервіс запустили після 20:00 — зробимо "доганяючий" запуск
-    now = datetime.now(TZ).time()
-    if dtime(20, 0) <= now <= dtime(23, 59, 59):
-        import asyncio
-        asyncio.create_task(_send_evening_reminders(bot, target="tomorrow"))
