@@ -75,46 +75,50 @@ async def _gen_available_dates_items(duration_min: int):
     today_local = datetime.now(TZ).date()
     horizon = today_local + timedelta(days=settings.BOOKING_HORIZON_DAYS)
 
+    # Один запит на весь горизонт
+    range_start_local = datetime.combine(today_local, dtime(0, 0)).replace(tzinfo=TZ)
+    range_end_local   = datetime.combine(horizon,     dtime(23, 59, 59)).replace(tzinfo=TZ)
+    body = {
+        "timeMin": range_start_local.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+        "timeMax": range_end_local.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+        "items": [{"id": settings.GCAL_ID}],
+    }
+
+    fb = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: service.freebusy().query(body=body).execute()
+    )
+    busy_all = fb["calendars"][settings.GCAL_ID]["busy"]
+
+    busy_intervals = []
+    for b in busy_all:
+        b_start = datetime.fromisoformat(b["start"].replace("Z", "+00:00"))
+        b_end   = datetime.fromisoformat(b["end"].replace("Z", "+00:00"))
+        busy_intervals.append((b_start, b_end))
+
+    def overlaps(s_utc, e_utc) -> bool:
+        for bs, be in busy_intervals:
+            if not (e_utc <= bs or s_utc >= be):
+                return True
+        return False
+
     items = []
     wk = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд']
-
     d = today_local
     while d <= horizon:
-        day_start_local = datetime.combine(d, dtime(0, 0)).replace(tzinfo=TZ)
-        day_end_local = datetime.combine(d, dtime(23, 59, 59)).replace(tzinfo=TZ)
-        body = {
-            "timeMin": day_start_local.astimezone(UTC).isoformat().replace("+00:00", "Z"),
-            "timeMax": day_end_local.astimezone(UTC).isoformat().replace("+00:00", "Z"),
-            "items": [{"id": settings.GCAL_ID}],
-        }
-        fb = await asyncio.get_event_loop().run_in_executor(None, lambda: service.freebusy().query(body=body).execute())
-        busy = fb["calendars"][settings.GCAL_ID]["busy"]
-
         now_local = datetime.now(TZ)
         candidates = _generate_candidate_starts(d, now_local)
-        found = False
         for t in candidates:
             h, m = map(int, t.split(':'))
             start_local = datetime.combine(d, dtime(h, m)).replace(tzinfo=TZ)
-            end_local = start_local + timedelta(minutes=duration_min)
+            end_local   = start_local + timedelta(minutes=duration_min)
             s_utc = start_local.astimezone(UTC)
             e_utc = end_local.astimezone(UTC)
-            overlap = False
-            for b in busy:
-                b_start = datetime.fromisoformat(b['start'].replace('Z', '+00:00'))
-                b_end = datetime.fromisoformat(b['end'].replace('Z', '+00:00'))
-                if not (e_utc <= b_start or s_utc >= b_end):
-                    overlap = True
-                    break
-            if not overlap:
-                found = True
+            if not overlaps(s_utc, e_utc):
+                items.append((str(d), f"{d.day:02d}.{d.month:02d} {wk[d.weekday()]}"))
                 break
-        if found:
-            label = f"{d.day:02d}.{d.month:02d} {wk[d.weekday()]}"
-            items.append((str(d), label))
         d += timedelta(days=1)
     return items
-
+    
 
 async def _get_available_times_for_date(chosen_date: date, duration_min: int):
     service = get_gcal()
