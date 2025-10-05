@@ -8,7 +8,7 @@ __pycache__/
 
 # Локальні дані та секрети
 .env
-.env.*
+!.env.example
 *.db
 *.sqlite3
 credentials.json
