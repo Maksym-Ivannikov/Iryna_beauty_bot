@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, time as dtime
 from zoneinfo import ZoneInfo
 from typing import Optional
 import aiosqlite
+import logging
 
 from config import settings
 
@@ -15,23 +16,21 @@ scheduler: Optional[AsyncIOScheduler] = None
 
 async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
     """
-    Розсилка нагадувань:
-      target="tomorrow" — як у проді: нагадуємо про ЗАВТРАшні записи (надсилаємо сьогодні о 20:00).
-      target="today"    — зручно для тесту: шукаємо СЬОГОДНІшні записи (для щохвилинного тригера).
+    target="tomorrow" — прод: нагадуємо про завтрашні записи (шлемо сьогодні о 20:00).
+    target="today"    — тест: шукаємо сьогоднішні записи.
     """
     now_local = datetime.now(TZ)
-    if target == "today":
-        target_date = now_local.date()
-    else:
-        target_date = now_local.date() + timedelta(days=1)
+    target_date = now_local.date() if target == "today" else (now_local + timedelta(days=1)).date()
 
-    start_local = datetime.combine(target_date, dtime(0, 0)).replace(tzinfo=TZ)
-    end_local = datetime.combine(target_date, dtime(23, 59, 59)).replace(tzinfo=TZ)
+    start_local = datetime.combine(target_date, dtime(0, 0, tzinfo=TZ))
+    end_local   = datetime.combine(target_date, dtime(23, 59, 59, tzinfo=TZ))
 
     start_utc = start_local.astimezone(UTC).isoformat()
-    end_utc = end_local.astimezone(UTC).isoformat()
+    end_utc   = end_local.astimezone(UTC).isoformat()
 
-    async with aiosqlite.connect("beauty.db") as db:
+    db_path = settings.DB_PATH
+
+    async with aiosqlite.connect(db_path) as db:
         cur = await db.execute(
             """
             SELECT b.id, b.client_id, b.start_utc, s.name
@@ -43,6 +42,8 @@ async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
             (start_utc, end_utc),
         )
         rows = await cur.fetchall()
+
+        logging.info(f"[reminders] target={target} rows={len(rows)} window={start_utc}..{end_utc} db={db_path}")
 
         for _, client_id, start_utc_iso, service_name in rows:
             cur2 = await db.execute(
@@ -71,40 +72,45 @@ async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
 
             try:
                 await bot.send_message(tg_id, msg)
-            except Exception:
-                # ігноруємо разові помилки відправки, щоб не зупиняти цикл
-                pass
+            except Exception as e:
+                logging.warning(f"[reminders] send failed to {tg_id}: {e}")
 
 
 def setup_scheduler(bot) -> None:
-    """
-    Реєструє джоби в AsyncIOScheduler.
-    ВАЖЛИВО: add_job приймає корутину напряму — без lambda.
-    """
+    """Реєструє джоби в AsyncIOScheduler."""
     global scheduler
     if scheduler is not None:
         return
 
-    scheduler = AsyncIOScheduler(timezone=TZ)
+    scheduler = AsyncIOScheduler(
+        timezone=TZ,
+        job_defaults={"misfire_grace_time": 3600, "coalesce": True},
+    )
 
-    # ✅ ПРОД: щодня о 20:00 — нагадування на ЗАВТРА
+    # ✅ Прод: щодня о 20:00 за локальною TZ — нагадування на завтра
     scheduler.add_job(
         _send_evening_reminders,
-        trigger=CronTrigger(hour=20, minute=0),
+        trigger=CronTrigger(hour=20, minute=0, timezone=TZ),
         args=[bot],
         kwargs={"target": "tomorrow"},
         id="evening_reminders_prod",
         replace_existing=True,
     )
 
-    # 🧪 ТЕСТ: раз на хвилину — шукаємо СЬОГОДНІшні записи (увімкни за потреби, потім вимкни)
-    #scheduler.add_job(
-    #    _send_evening_reminders,
-    #    trigger=CronTrigger(minute="*/1"),
-    #    args=[bot],
-    #    kwargs={"target": "today"},
-    #    id="evening_reminders_test",
-    #    replace_existing=True,
-    #)
+    # 🧪 Тест-джоба (за потреби)
+    # scheduler.add_job(
+    #     _send_evening_reminders,
+    #     trigger=CronTrigger(minute="*/1", timezone=TZ),
+    #     args=[bot],
+    #     kwargs={"target": "today"},
+    #     id="evening_reminders_test",
+    #     replace_existing=True,
+    # )
 
     scheduler.start()
+
+    # (опційно) якщо сервіс запустили після 20:00 — зробимо "доганяючий" запуск
+    now = datetime.now(TZ).time()
+    if dtime(20, 0) <= now <= dtime(23, 59, 59):
+        import asyncio
+        asyncio.create_task(_send_evening_reminders(bot, target="tomorrow"))

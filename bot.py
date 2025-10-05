@@ -179,7 +179,7 @@ async def contacts_cmd(m: types.Message, state: FSMContext = None):
 Strada Ion Bogdan 18
 Верхній домофон 6
 https://maps.app.goo.gl/7AJXbvq1o9aeDUHR7?g_st=ipc
-Instagram: @irina_bryzhyk"""
+Instagram: https://www.instagram.com/irina_bryzhyk?igsh=M2N5enF2MG53cjRs"""
     )
 
 
