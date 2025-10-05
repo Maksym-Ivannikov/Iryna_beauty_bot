@@ -63,7 +63,7 @@ async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
 
             msg = (
                 "Добрий вечір!🫶🏻\n"
-                f"Чекаю завтра о {time_str}.\n\n"
+                f"Чекаю завтра о {time_str} — {service_name}.\n\n"
                 "За адресою:\n"
                 "Strada Ion Bogdan 18,\n"
                 "Верхній домофон 6\n"
@@ -93,7 +93,7 @@ def setup_scheduler(bot) -> None:
     # ТЕСТ: щодня о 20:55 за локальною TZ — нагадування на завтра
     scheduler.add_job(
         _send_evening_reminders,
-        trigger=CronTrigger(hour=21, minute=2, timezone=TZ),
+        trigger=CronTrigger(hour=23, minute=59, timezone=TZ),
         args=[bot],
         kwargs={"target": "tomorrow"},
         id="evening_reminders_prod",
