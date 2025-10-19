@@ -13,6 +13,7 @@ UTC = ZoneInfo("UTC")
 
 scheduler: Optional[AsyncIOScheduler] = None
 
+
 async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
     """
     target="tomorrow" — прод: нагадуємо про завтрашні записи (шлемо сьогодні ввечері).
@@ -21,11 +22,13 @@ async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
     now_local = datetime.now(TZ)
     target_date = now_local.date() if target == "today" else (now_local + timedelta(days=1)).date()
 
+    # межі доби у локальній TZ
     start_local = datetime.combine(target_date, dtime(0, 0, tzinfo=TZ))
     end_local   = datetime.combine(target_date, dtime(23, 59, 59, tzinfo=TZ))
 
-    start_utc_iso = start_local.astimezone(UTC).isoformat()
-    end_utc_iso   = end_local.astimezone(UTC).isoformat()
+    # конвертуємо в aware datetime (UTC) і ПЕРЕДАЄМО JАК datetime, не як str
+    start_utc = start_local.astimezone(UTC)
+    end_utc   = end_local.astimezone(UTC)
 
     db_url = settings.DATABASE_URL
     if not db_url:
@@ -39,17 +42,17 @@ async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
             SELECT b.id, b.client_id, b.start_utc, s.name
             FROM bookings b
             JOIN services s ON s.id = b.service_id
-            WHERE b.status = 'active' AND b.start_utc BETWEEN $1::timestamptz AND $2::timestamptz
+            WHERE b.status = 'active' AND b.start_utc BETWEEN $1 AND $2
             ORDER BY b.start_utc
             """,
-            start_utc_iso, end_utc_iso
+            start_utc, end_utc
         )
 
-        logging.info(f"[reminders] target={target} rows={len(rows)} window={start_utc_iso}..{end_utc_iso}")
+        logging.info(f"[reminders] target={target} rows={len(rows)} window={start_utc.isoformat()}..{end_utc.isoformat()}")
 
         for r in rows:
             client_id = r["client_id"]
-            start_dt = r["start_utc"]
+            start_dt: datetime = r["start_utc"]  # TIMESTAMPTZ → datetime
             service_name = r["name"]
 
             c = await conn.fetchrow(
@@ -81,6 +84,7 @@ async def _send_evening_reminders(bot, *, target: str = "tomorrow") -> None:
     finally:
         await conn.close()
 
+
 def setup_scheduler(bot) -> None:
     """Реєструє джоби в AsyncIOScheduler (без catch-up після рестартів)."""
     global scheduler
@@ -92,9 +96,10 @@ def setup_scheduler(bot) -> None:
         job_defaults={"misfire_grace_time": 1, "coalesce": True},
     )
 
+    # прод-джоба: кожного дня о 20:00 локального часу
     scheduler.add_job(
         _send_evening_reminders,
-        trigger=CronTrigger(hour=20, minute=0, timezone=TZ),
+        trigger=CronTrigger(hour=21, minute=51, timezone=TZ),
         args=[bot],
         kwargs={"target": "tomorrow"},
         id="evening_reminders_prod",
@@ -102,7 +107,7 @@ def setup_scheduler(bot) -> None:
         misfire_grace_time=1,
     )
 
-    # Тест-джоба (вимкнена)
+    # # тест-джоба (за потреби можна увімкнути тимчасово)
     # scheduler.add_job(
     #     _send_evening_reminders,
     #     trigger=CronTrigger(minute="*/1", timezone=TZ),
