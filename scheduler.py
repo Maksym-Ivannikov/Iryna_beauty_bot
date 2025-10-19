@@ -99,7 +99,7 @@ def setup_scheduler(bot) -> None:
     # прод-джоба: кожного дня о 20:00 локального часу
     scheduler.add_job(
         _send_evening_reminders,
-        trigger=CronTrigger(hour=21, minute=51, timezone=TZ),
+        trigger=CronTrigger(hour=20, minute=00, timezone=TZ),
         args=[bot],
         kwargs={"target": "tomorrow"},
         id="evening_reminders_prod",
