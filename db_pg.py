@@ -1,6 +1,6 @@
 import asyncpg
 from datetime import datetime
-from typing import List, Tuple, Optional
+from typing import Optional, Tuple, List, Any
 from config import settings
 
 # Повертаємо з функцій ті ж «кортежі», що й у SQLite-версії,
@@ -53,7 +53,17 @@ async def init_db():
     finally:
         await conn.close()
 
-# ---- clients ---------------------------------------------------------------
+# ---- helpers ----------------------------------------------------------------
+
+def _to_dt(val: Any) -> datetime:
+    """Приймає datetime або ISO-рядок (у т.ч. з 'Z') і повертає datetime."""
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, str):
+        return datetime.fromisoformat(val.replace("Z", "+00:00"))
+    raise TypeError("start_utc/end_utc must be datetime or ISO string")
+
+# ---- clients ----------------------------------------------------------------
 
 async def upsert_client(
     tg_id: int,
@@ -92,7 +102,7 @@ async def get_client_by_tg(tg_id: int):
     finally:
         await conn.close()
 
-# ---- services --------------------------------------------------------------
+# ---- services ---------------------------------------------------------------
 
 async def list_services(active_only: bool = True):
     conn = await asyncpg.connect(_url())
@@ -123,13 +133,21 @@ async def get_service(service_id: int):
     finally:
         await conn.close()
 
-async def create_booking(client_id: int, service_id: int, start_utc: str, end_utc: str, event_id: str):
+# ---- bookings ---------------------------------------------------------------
+
+async def create_booking(client_id: int, service_id: int, start_utc: Any, end_utc: Any, event_id: str):
+    """
+    Приймає або datetime (timezone-aware), або ISO-рядок. Зберігає у TIMESTAMPTZ.
+    """
+    start_dt = _to_dt(start_utc)
+    end_dt   = _to_dt(end_utc)
+
     conn = await asyncpg.connect(_url())
     try:
         await conn.execute(
             "INSERT INTO bookings(client_id, service_id, start_utc, end_utc, event_id, status, created_at) "
-            "VALUES($1,$2,$3::timestamptz,$4::timestamptz,$5,'active', NOW())",
-            client_id, service_id, start_utc, end_utc, event_id
+            "VALUES($1,$2,$3,$4,$5,'active', NOW())",
+            client_id, service_id, start_dt, end_dt, event_id
         )
     finally:
         await conn.close()
@@ -211,7 +229,6 @@ async def sync_services_with_seed(seed_services: list[tuple[str, int]]):
                 seed_names
             )
         else:
-            # якщо seed порожній — деактивуємо всі
             await conn.execute("UPDATE services SET active=0 WHERE active=1")
     finally:
         await conn.close()
