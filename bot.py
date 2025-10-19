@@ -11,7 +11,19 @@ from aiogram.dispatcher.filters import Text
 from dotenv import load_dotenv
 
 from config import settings
-from db import init_db, list_services, add_service, get_service as get_service_db, upsert_client, get_client_by_tg, create_booking, list_future_active_bookings_by_client, get_booking, cancel_booking
+from db import (
+    init_db,
+    list_services,
+    add_service,
+    get_service as get_service_db,
+    upsert_client,
+    get_client_by_tg,
+    create_booking,
+    list_future_active_bookings_by_client,
+    get_booking,
+    cancel_booking,
+    sync_services_with_seed,  # 🔥 додано
+)
 from states import BookingFlow
 from calendar_integration import is_slot_free, create_event, delete_event, get_service as get_gcal
 from keyboards import main_kb, services_ikb, time_slots_ikb, bookings_ikb, cancel_confirm_ikb, phone_request_kb, dates_ikb, confirm_ikb
@@ -481,6 +493,6 @@ async def on_startup(dp: Dispatcher):
     # синхронізація послуг замість старого seed
     await sync_services_with_seed(SERVICES_SEED)
     setup_scheduler(dp.bot)
-    
+
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, timeout=30)
