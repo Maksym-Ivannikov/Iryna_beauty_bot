@@ -11,7 +11,7 @@ from aiogram.dispatcher.filters import Text
 from dotenv import load_dotenv
 
 from config import settings
-from db import (
+from db_pg import (
     init_db,
     list_services,
     add_service,
@@ -22,8 +22,9 @@ from db import (
     list_future_active_bookings_by_client,
     get_booking,
     cancel_booking,
-    sync_services_with_seed,  # 🔥 додано
+    sync_services_with_seed,
 )
+
 from states import BookingFlow
 from calendar_integration import is_slot_free, create_event, delete_event, get_service as get_gcal
 from keyboards import main_kb, services_ikb, time_slots_ikb, bookings_ikb, cancel_confirm_ikb, phone_request_kb, dates_ikb, confirm_ikb

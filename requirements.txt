@@ -7,3 +7,4 @@ google-auth==2.35.0
 google-auth-oauthlib==1.2.1
 pytz==2024.1
 gunicorn==23.0.0
+asyncpg==0.29.0
