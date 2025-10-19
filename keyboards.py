@@ -1,19 +1,16 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-
 def main_kb():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    # одна кнопка в рядок, щоб текст не обрізався
     kb.row(KeyboardButton("🧚 Записатися"))
     kb.row(KeyboardButton("📅 Мої записи"))
     kb.row(KeyboardButton("ℹ️ Контакти"))
     return kb
 
-
 def services_ikb(services):
+    """Показує тільки активні послуги (фільтрація відбувається у list_services)."""
     ikb = InlineKeyboardMarkup(row_width=1)
     for s in services:
-        # s: (id, name, duration_min)
         ikb.add(InlineKeyboardButton(f"{s[1]} — {s[2]} хв", callback_data=f"srv_{s[0]}"))
     ikb.add(InlineKeyboardButton("❌ Скасувати", callback_data="cancel_flow"))
     return ikb

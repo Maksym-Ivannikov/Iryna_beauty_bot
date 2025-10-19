@@ -478,13 +478,9 @@ async def back_to_list(cq: types.CallbackQuery):
 
 async def on_startup(dp: Dispatcher):
     await init_db()
-    # seed services
-    existing = await list_services()
-    if not existing:
-        for name, dur in SERVICES_SEED:
-            await add_service(name, dur)
+    # синхронізація послуг замість старого seed
+    await sync_services_with_seed(SERVICES_SEED)
     setup_scheduler(dp.bot)
-
-
+    
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, timeout=30)
