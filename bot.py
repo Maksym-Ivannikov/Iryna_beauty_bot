@@ -312,11 +312,11 @@ async def phone_shared(m: types.Message, state: FSMContext):
     from keyboards import confirm_ikb
     await BookingFlow.Confirm.set()
     await m.answer(
-    "Підтвердити запис?",
-    reply_markup=confirm_ikb()
-)
-# Прибрати клавіатуру з кнопками телефону
-await m.answer(" ", reply_markup=types.ReplyKeyboardRemove())
+        "Підтвердити запис?",
+        reply_markup=confirm_ikb()
+    )
+    # Прибрати клавіатуру з кнопками телефону
+    await m.answer(" ", reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(Text(equals="Введу номер вручну"), state=BookingFlow.WaitingPhone)
