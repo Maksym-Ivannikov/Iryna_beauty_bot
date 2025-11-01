@@ -311,12 +311,12 @@ async def phone_shared(m: types.Message, state: FSMContext):
     await state.update_data(phone=m.contact.phone_number)
     from keyboards import confirm_ikb
     await BookingFlow.Confirm.set()
-    await m.answer(
-        "Підтвердити запис?",
-        reply_markup=confirm_ikb()
-    )
-    # Прибрати клавіатуру з кнопками телефону
+
+    # Прибираємо клавіатуру з кнопками телефону
     await m.answer(" ", reply_markup=types.ReplyKeyboardRemove())
+
+    # Показуємо кнопки підтвердження
+    await m.answer("Підтвердити запис?", reply_markup=confirm_ikb())
 
 
 @dp.message_handler(Text(equals="Введу номер вручну"), state=BookingFlow.WaitingPhone)
@@ -341,7 +341,7 @@ async def cancel_flow_cb(cq: types.CallbackQuery, state: FSMContext):
         await cq.message.edit_text("Скасовано.")
     except Exception:
         pass
-    await cq.message.answer("Ви в головному меню.", reply_markup=main_kb())
+    await cq.message.answer("Ви в головному меню:", reply_markup=main_kb())
     await cq.answer()
 
 
@@ -425,6 +425,9 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
     await state.finish()
     when_str = start_local.strftime('%H:%M %d.%m.%Y')
     await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]} Гарного дня 🌷")
+
+    # Повертаємо користувача до головного меню
+    await cq.message.answer("Ви в головному меню:", reply_markup=main_kb())
     await cq.answer()
 
 
