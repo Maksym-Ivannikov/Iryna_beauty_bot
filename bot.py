@@ -309,10 +309,20 @@ async def phone_shared(m: types.Message, state: FSMContext):
     if not m.contact or not m.contact.phone_number:
         return await m.answer("Не бачу номера. Спробуйте ще раз або введіть вручну.")
 
-    logging.info(f"[phone_shared] Отримано контакт: {m.contact.phone_number}")
+    phone = m.contact.phone_number
+    logging.info(f"[phone_shared] Отримано контакт: {phone}")
 
     # Зберігаємо номер у state
-    await state.update_data(phone=m.contact.phone_number)
+    await state.update_data(phone=phone)
+
+    # 🔹 Одразу оновлюємо номер у БД (щоб не загубився при скасуванні)
+    await upsert_client(
+        tg_id=m.from_user.id,
+        username=m.from_user.username or None,
+        first_name=m.from_user.first_name or None,
+        last_name=m.from_user.last_name or None,
+        phone=phone
+    )
 
     # Прибираємо клавіатуру з кнопками телефону
     await m.answer("✅ Номер отримано.", reply_markup=types.ReplyKeyboardRemove())
@@ -334,9 +344,25 @@ async def phone_manual_entered(m: types.Message, state: FSMContext):
     phone = m.text.strip()
     if len(phone) < 5:
         return await m.answer("Занадто короткий номер. Введіть ще раз:")
+
+    logging.info(f"[phone_manual_entered] Отримано номер вручну: {phone}")
+
+    # Зберігаємо номер у state
     await state.update_data(phone=phone)
+
+    # 🔹 Одразу оновлюємо номер у БД (аналогічно до варіанту з контактом)
+    await upsert_client(
+        tg_id=m.from_user.id,
+        username=m.from_user.username or None,
+        first_name=m.from_user.first_name or None,
+        last_name=m.from_user.last_name or None,
+        phone=phone
+    )
+
+    # Переходимо до підтвердження
     await BookingFlow.Confirm.set()
-    await m.answer("Підтвердити запис?", reply_markup=confirm_ikb())
+
+    await m.answer("✅ Номер збережено. Підтвердити запис?", reply_markup=confirm_ikb())
 
 
 @dp.callback_query_handler(lambda c: c.data == "cancel_flow", state='*')
@@ -430,9 +456,6 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
     await state.finish()
     when_str = start_local.strftime('%H:%M %d.%m.%Y')
     await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]} Гарного дня 🌷")
-
-    # Повертаємо користувача до головного меню
-    await cq.message.answer("Ви в головному меню:", reply_markup=main_kb())
     await cq.answer()
 
 
