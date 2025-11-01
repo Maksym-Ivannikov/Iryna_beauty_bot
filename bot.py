@@ -308,12 +308,17 @@ async def choose_time(cq: types.CallbackQuery, state: FSMContext):
 async def phone_shared(m: types.Message, state: FSMContext):
     if not m.contact or not m.contact.phone_number:
         return await m.answer("Не бачу номера. Спробуйте ще раз або введіть вручну.")
+
+    logging.info(f"[phone_shared] Отримано контакт: {m.contact.phone_number}")
+
+    # Зберігаємо номер у state
     await state.update_data(phone=m.contact.phone_number)
-    from keyboards import confirm_ikb
-    await BookingFlow.Confirm.set()
 
     # Прибираємо клавіатуру з кнопками телефону
-    await m.answer(" ", reply_markup=types.ReplyKeyboardRemove())
+    await m.answer("✅ Номер отримано.", reply_markup=types.ReplyKeyboardRemove())
+
+    # Перемикаємось на підтвердження
+    await BookingFlow.Confirm.set()
 
     # Показуємо кнопки підтвердження
     await m.answer("Підтвердити запис?", reply_markup=confirm_ikb())
