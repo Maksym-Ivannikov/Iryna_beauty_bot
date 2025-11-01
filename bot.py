@@ -421,7 +421,7 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
     )
 
     await state.finish()
-    when_str = start_local.strftime('%H:%M %d.%м.%Y')
+    when_str = start_local.strftime('%H:%M %d.%m.%Y')
     await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]} Гарного дня 🌷")
     await cq.answer()
 
