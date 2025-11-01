@@ -1,11 +1,10 @@
 from __future__ import annotations
 import datetime as dt
+import json
+import os
 from typing import Optional
-
-from google.oauth2.credentials import Credentials
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
-
 from config import settings
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
@@ -13,14 +12,28 @@ _service = None
 
 
 def get_service():
-    """Повертає кешований клієнт Google Calendar API."""
+    """Повертає кешований клієнт Google Calendar API (через сервісний акаунт)."""
     global _service
     if _service is not None:
         return _service
-    creds = Credentials.from_authorized_user_file(settings.GTOKEN_PATH, SCOPES)
-    if not creds.valid and creds.refresh_token:
-        creds.refresh(Request())
-    # Вимикаємо discovery-кеш, щоб не було зайвого лог-повідомлення
+
+    creds = None
+
+    # 1️⃣ Якщо існує файл у volume (/data/service_account.json)
+    if os.path.exists(settings.GCREDS_PATH):
+        creds = Credentials.from_service_account_file(settings.GCREDS_PATH, scopes=SCOPES)
+
+    # 2️⃣ Якщо ні — пробуємо з ENV
+    elif settings.GCREDS_JSON:
+        try:
+            creds_dict = json.loads(settings.GCREDS_JSON)
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        except Exception as e:
+            raise RuntimeError(f"❌ Invalid GOOGLE_CREDENTIALS_JSON: {e}")
+
+    if not creds:
+        raise RuntimeError("❌ No Google service account credentials provided")
+
     _service = build("calendar", "v3", credentials=creds, cache_discovery=False)
     return _service
 

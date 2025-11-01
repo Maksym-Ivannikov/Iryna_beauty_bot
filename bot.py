@@ -35,14 +35,10 @@ logging.basicConfig(level=logging.INFO)
 load_dotenv()
 logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
-# --- Create Google credentials files if provided via env (Railway deploy) ---
-if settings.GCRED_JSON and not os.path.exists(settings.GCRED_PATH):
-    with open(settings.GCRED_PATH, "w") as f:
-        f.write(settings.GCRED_JSON)
-
-if settings.GTOKEN_JSON and not os.path.exists(settings.GTOKEN_PATH):
-    with open(settings.GTOKEN_PATH, "w") as f:
-        f.write(settings.GTOKEN_JSON)
+# --- Create Google service account file if provided via env (Railway deploy) ---
+if settings.GCREDS_JSON and not os.path.exists(settings.GCREDS_PATH):
+    with open(settings.GCREDS_PATH, "w") as f:
+        f.write(settings.GCREDS_JSON)
 # ---------------------------------------------------------------------------
 
 TZ = ZoneInfo(settings.TZ)

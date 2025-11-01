@@ -15,6 +15,7 @@ credentials.json
 token.json
 gcal_ping.py
 oauth_bootstrap.py
+service_account.json
 
 # Логи
 *.log
