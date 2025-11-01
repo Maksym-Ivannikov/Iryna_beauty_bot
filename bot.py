@@ -334,11 +334,16 @@ async def phone_shared(m: types.Message, state: FSMContext):
 async def cancel_flow_cb(cq: types.CallbackQuery, state: FSMContext):
     await state.finish()
     try:
-        await cq.message.edit_text("Скасовано.")
+        await cq.message.edit_text("❌ Скасовано.")
     except Exception:
         pass
-    # використовуємо non-breaking space щоб уникнути BadRequest
-    await cq.message.answer(" ", reply_markup=main_kb())
+
+    # Невелика пауза, щоб Telegram встиг "переварити" зміну тексту
+    await asyncio.sleep(0.5)
+
+    # Використовуємо non-breaking space (щоб уникнути BadRequest)
+    await cq.message.answer("\u00A0", reply_markup=main_kb())
+
     await cq.answer()
 
 
@@ -421,7 +426,14 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
 
     await state.finish()
     when_str = start_local.strftime('%H:%M %d.%m.%Y')
-    await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]} Гарного дня 🌷")
+    await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]} 🌷")
+
+    # Невелика пауза для стабільності Telegram API
+    await asyncio.sleep(0.5)
+
+    # Повертаємо головну клавіатуру
+    await cq.message.answer("\u00A0", reply_markup=main_kb())
+
     await cq.answer()
 
 
