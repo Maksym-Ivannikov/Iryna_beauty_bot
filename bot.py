@@ -266,7 +266,9 @@ async def choose_time(cq: types.CallbackQuery, state: FSMContext):
     chosen_date = datetime.strptime(data.get('date'), "%Y-%m-%d").date()
     start_local = datetime.combine(chosen_date, dtime(hh, mm)).replace(tzinfo=TZ)
     end_local = start_local + timedelta(minutes=svc[2])
-    free = await asyncio.get_event_loop().run_in_executor(None, lambda: is_slot_free(start_local.astimezone(UTC), end_local.astimezone(UTC)))
+    free = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: is_slot_free(start_local.astimezone(UTC), end_local.astimezone(UTC))
+    )
     if not free:
         slots = await _get_available_times_for_date(chosen_date, svc[2])
         if slots:
@@ -280,15 +282,25 @@ async def choose_time(cq: types.CallbackQuery, state: FSMContext):
     await state.update_data(time=t)
 
     when_str = start_local.strftime('%H:%M %d.%m.%Y')
-    service_name = svc[1]
 
-    if cq.from_user.username:
+    client = await get_client_by_tg(cq.from_user.id)
+    has_phone = bool(client and client[5])  # client[5] = phone
+
+    if cq.from_user.username or has_phone:
         await BookingFlow.Confirm.set()
-        await cq.message.edit_text(f"Підтверджуємо запис на {when_str} — {svc[1]}?", reply_markup=confirm_ikb())
+        await cq.message.edit_text(
+            f"Підтверджуємо запис на {when_str} — {svc[1]}?",
+            reply_markup=confirm_ikb()
+        )
     else:
         await BookingFlow.WaitingPhone.set()
-        await cq.message.edit_text("У Вас немає @username. Поділіться контактом або введіть номер вручну.")
-        await cq.message.answer("Надішліть контакт або натисніть 'Введу номер вручну'", reply_markup=phone_request_kb())
+        await cq.message.edit_text(
+            "У Вас немає @username або номера телефону. Поділіться контактом або введіть номер вручну."
+        )
+        await cq.message.answer(
+            "Надішліть контакт або натисніть 'Введу номер вручну'",
+            reply_markup=phone_request_kb()
+        )
     await cq.answer()
 
 
@@ -297,8 +309,12 @@ async def phone_shared(m: types.Message, state: FSMContext):
     if not m.contact or not m.contact.phone_number:
         return await m.answer("Не бачу номера. Спробуйте ще раз або введіть вручну.")
     await state.update_data(phone=m.contact.phone_number)
+    from keyboards import confirm_ikb
     await BookingFlow.Confirm.set()
-    await m.answer("Підтвердити запис?", reply_markup=types.ReplyKeyboardRemove())
+    await m.answer(
+        "Підтвердити запис?",
+        reply_markup=confirm_ikb()
+    )
 
 
 @dp.message_handler(Text(equals="Введу номер вручну"), state=BookingFlow.WaitingPhone)
@@ -313,7 +329,7 @@ async def phone_manual_entered(m: types.Message, state: FSMContext):
         return await m.answer("Занадто короткий номер. Введіть ще раз:")
     await state.update_data(phone=phone)
     await BookingFlow.Confirm.set()
-    await m.answer("Підтвердити запис?", reply_markup=types.ReplyKeyboardRemove())
+    await m.answer("Підтвердити запис?", reply_markup=confirm_ikb())
 
 
 @dp.callback_query_handler(lambda c: c.data == "cancel_flow", state='*')
@@ -405,7 +421,7 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
     )
 
     await state.finish()
-    when_str = start_local.strftime('%H:%M %d.%m.%Y')
+    when_str = start_local.strftime('%H:%M %d.%м.%Y')
     await cq.message.edit_text(f"✅ Готово! Запис створено на {when_str} — {svc[1]} Гарного дня 🌷")
     await cq.answer()
 
@@ -440,6 +456,7 @@ async def booking_detail(cq: types.CallbackQuery):
     await cq.message.edit_text(text, reply_markup=cancel_confirm_ikb(booking_id))
     await cq.answer()
 
+
 @dp.callback_query_handler(lambda c: c.data.startswith("cancel_"))
 async def cancel_booking_cb(cq: types.CallbackQuery):
     try:
@@ -472,6 +489,7 @@ async def cancel_booking_cb(cq: types.CallbackQuery):
     await cq.message.edit_text("Запис скасовано. Чекаємо Вас у зручний час! 🫶")
     await cq.answer("Скасовано")
 
+
 @dp.callback_query_handler(Text(equals="back_to_list"))
 async def back_to_list(cq: types.CallbackQuery):
     client = await get_client_by_tg(cq.from_user.id)
@@ -490,6 +508,7 @@ async def on_startup(dp: Dispatcher):
     # синхронізація послуг замість старого seed
     await sync_services_with_seed(SERVICES_SEED)
     setup_scheduler(dp.bot)
+
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, timeout=30)
