@@ -74,8 +74,7 @@ def confirm_ikb():
 
 
 def phone_request_kb():
-    """Reply-клавіатура для запиту номера телефону або ручного вводу."""
+    """Reply-клавіатура лише з кнопкою для надсилання контакту."""
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     kb.add(KeyboardButton("📱 Поділитися контактом", request_contact=True))
-    kb.add(KeyboardButton("Введу номер вручну"))
     return kb

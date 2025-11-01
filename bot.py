@@ -307,15 +307,13 @@ async def choose_time(cq: types.CallbackQuery, state: FSMContext):
 @dp.message_handler(content_types=types.ContentTypes.CONTACT, state=BookingFlow.WaitingPhone)
 async def phone_shared(m: types.Message, state: FSMContext):
     if not m.contact or not m.contact.phone_number:
-        return await m.answer("Не бачу номера. Спробуйте ще раз або введіть вручну.")
+        return await m.answer("Не бачу номера. Спробуйте ще раз.")
 
     phone = m.contact.phone_number
     logging.info(f"[phone_shared] Отримано контакт: {phone}")
 
-    # Зберігаємо номер у state
+    # Зберігаємо номер у state і БД
     await state.update_data(phone=phone)
-
-    # 🔹 Одразу оновлюємо номер у БД (щоб не загубився при скасуванні)
     await upsert_client(
         tg_id=m.from_user.id,
         username=m.from_user.username or None,
@@ -325,54 +323,22 @@ async def phone_shared(m: types.Message, state: FSMContext):
     )
 
     # Прибираємо клавіатуру з кнопками телефону
-    await m.answer("✅ Номер отримано.", reply_markup=types.ReplyKeyboardRemove())
+    await m.answer("✅ Номер збережено.", reply_markup=types.ReplyKeyboardRemove())
 
-    # Перемикаємось на підтвердження
+    # Перехід до підтвердження запису
     await BookingFlow.Confirm.set()
-
-    # Показуємо кнопки підтвердження
     await m.answer("Підтвердити запис?", reply_markup=confirm_ikb())
 
 
-@dp.message_handler(Text(equals="Введу номер вручну"), state=BookingFlow.WaitingPhone)
-async def ask_phone_manual(m: types.Message):
-    await m.answer("Введіть номер телефону одним рядком:", reply_markup=types.ReplyKeyboardRemove())
-
-
-@dp.message_handler(state=BookingFlow.WaitingPhone)
-async def phone_manual_entered(m: types.Message, state: FSMContext):
-    phone = m.text.strip()
-    if len(phone) < 5:
-        return await m.answer("Занадто короткий номер. Введіть ще раз:")
-
-    logging.info(f"[phone_manual_entered] Отримано номер вручну: {phone}")
-
-    # Зберігаємо номер у state
-    await state.update_data(phone=phone)
-
-    # 🔹 Одразу оновлюємо номер у БД (аналогічно до варіанту з контактом)
-    await upsert_client(
-        tg_id=m.from_user.id,
-        username=m.from_user.username or None,
-        first_name=m.from_user.first_name or None,
-        last_name=m.from_user.last_name or None,
-        phone=phone
-    )
-
-    # Переходимо до підтвердження
-    await BookingFlow.Confirm.set()
-
-    await m.answer("✅ Номер збережено. Підтвердити запис?", reply_markup=confirm_ikb())
-
-
-@dp.callback_query_handler(lambda c: c.data == "cancel_flow", state='*')
+@dp.callback_query_handler(lambda c: c.data == "cancel_flow", state="*")
 async def cancel_flow_cb(cq: types.CallbackQuery, state: FSMContext):
     await state.finish()
     try:
         await cq.message.edit_text("Скасовано.")
     except Exception:
         pass
-    await cq.message.answer("Ви в головному меню:", reply_markup=main_kb())
+    # використовуємо non-breaking space щоб уникнути BadRequest
+    await cq.message.answer(" ", reply_markup=main_kb())
     await cq.answer()
 
 
