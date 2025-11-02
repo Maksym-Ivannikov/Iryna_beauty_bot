@@ -515,8 +515,19 @@ async def cancel_booking_cb(cq: types.CallbackQuery):
         start_local = datetime.fromisoformat(b[3]).replace(tzinfo=UTC).astimezone(TZ)
         when_str = start_local.strftime('%H:%M %d.%m.%Y')
         client = await get_client_by_tg(cq.from_user.id)
-        name = f"{client[3] or ''} {client[4] or ''}".strip() or "—"
+
+        # формуємо ім’я і контакти так само, як у confirm_booking_cb
+        full_name = " ".join(x for x in [client[3], client[4]] if x)
         username = f"@{cq.from_user.username}" if cq.from_user.username else ""
+        phone = client[5] or None
+
+        contact_parts = []
+        if username:
+            contact_parts.append(username)
+        if phone:
+            contact_parts.append(f"Телефон: {phone}")
+        contacts = ", ".join(contact_parts) if contact_parts else "—"
+
         admin_text = (
             f"❌ *Запис скасовано*\n"
             f"👤 {full_name or '—'}\n"
@@ -525,9 +536,9 @@ async def cancel_booking_cb(cq: types.CallbackQuery):
             f"🕒 {when_str}"
         )
         await bot.send_message(settings.ADMIN_ID, admin_text, parse_mode="Markdown")
+
     except Exception as e:
         logging.warning(f"[admin_notify] Failed to send cancel notice: {e}")
-
 
 
 @dp.callback_query_handler(Text(equals="back_to_list"))
