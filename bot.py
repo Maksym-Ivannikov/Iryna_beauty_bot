@@ -519,7 +519,8 @@ async def cancel_booking_cb(cq: types.CallbackQuery):
         username = f"@{cq.from_user.username}" if cq.from_user.username else ""
         admin_text = (
             f"❌ *Запис скасовано*\n"
-            f"👤 {name} {username}\n"
+            f"👤 {full_name or '—'}\n"
+            f"💬 {contacts}\n"
             f"💅 {svc[1]}\n"
             f"🕒 {when_str}"
         )
