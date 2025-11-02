@@ -383,23 +383,25 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
         await cq.answer()
         return
 
-    phone = data.get('phone')
+    # 🔹 Оновлюємо дані користувача в БД
     await upsert_client(
         tg_id=user.id,
         username=user.username or None,
         first_name=user.first_name or None,
         last_name=user.last_name or None,
-        phone=phone
     )
     client = await get_client_by_tg(user.id)
 
     full_name = " ".join(x for x in [user.first_name, user.last_name] if x)
-    contact_line = []
-    if user.username:
-        contact_line.append(f"@{user.username}")
+    username = f"@{user.username}" if user.username else ""
+    phone = client[5] or None
+
+    contact_parts = []
+    if username:
+        contact_parts.append(username)
     if phone:
-        contact_line.append(f"Телефон: {phone}")
-    contacts = ", ".join(contact_line) if contact_line else "—"
+        contact_parts.append(f"Телефон: {phone}")
+    contacts = ", ".join(contact_parts) if contact_parts else "—"
 
     description_lines = [
         f"Ім'я: {full_name or '—'}",
