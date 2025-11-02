@@ -430,6 +430,19 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
 
     await cq.answer()
 
+    # 🔔 Сповіщення адміну (Ірині)
+    try:
+        admin_text = (
+            f"📅 *Новий запис*\n"
+            f"👤 {full_name or '—'}\n"
+            f"💬 {contacts}\n"
+            f"💅 {svc[1]}\n"
+            f"🕒 {when_str}"
+        )
+        await bot.send_message(settings.ADMIN_ID, admin_text, parse_mode="Markdown")
+    except Exception as e:
+        logging.warning(f"[admin_notify] Failed to send new booking: {e}")
+
 
 @dp.message_handler(Text(equals="📅 Мої записи"), state='*')
 async def my_bookings(m: types.Message, state: FSMContext = None):
@@ -493,6 +506,25 @@ async def cancel_booking_cb(cq: types.CallbackQuery):
     # Відповідь юзеру
     await cq.message.edit_text("Запис скасовано. Чекаємо Вас у зручний час! 🫶")
     await cq.answer("Скасовано")
+
+    # 🔔 Сповіщення адміну (Ірині)
+    try:
+        svc = await get_service_db(b[2])
+        start_local = datetime.fromisoformat(b[3]).replace(tzinfo=UTC).astimezone(TZ)
+        when_str = start_local.strftime('%H:%M %d.%m.%Y')
+        client = await get_client_by_tg(cq.from_user.id)
+        name = f"{client[3] or ''} {client[4] or ''}".strip() or "—"
+        username = f"@{cq.from_user.username}" if cq.from_user.username else ""
+        admin_text = (
+            f"❌ *Запис скасовано*\n"
+            f"👤 {name} {username}\n"
+            f"💅 {svc[1]}\n"
+            f"🕒 {when_str}"
+        )
+        await bot.send_message(settings.ADMIN_ID, admin_text, parse_mode="Markdown")
+    except Exception as e:
+        logging.warning(f"[admin_notify] Failed to send cancel notice: {e}")
+
 
 
 @dp.callback_query_handler(Text(equals="back_to_list"))
