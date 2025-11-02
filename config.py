@@ -5,6 +5,7 @@ import os
 class Settings:
     # Telegram
     BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    ADMIN_ID: int = int(os.getenv("ADMIN_ID", "0"))
 
     # Google Calendar (через сервісний акаунт)
     GCAL_ID: str = os.getenv("GOOGLE_CALENDAR_ID", "primary")
