@@ -8,6 +8,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
+from aiogram.utils.markdown import escape_md
 from dotenv import load_dotenv
 
 from config import settings
@@ -29,6 +30,7 @@ from states import BookingFlow
 from calendar_integration import is_slot_free, create_event, delete_event, get_service as get_gcal
 from keyboards import main_kb, services_ikb, time_slots_ikb, bookings_ikb, cancel_confirm_ikb, phone_request_kb, dates_ikb, confirm_ikb
 from scheduler import setup_scheduler
+
 
 # --- Logging & env ---
 logging.basicConfig(level=logging.INFO)
@@ -434,10 +436,13 @@ async def confirm_booking_cb(cq: types.CallbackQuery, state: FSMContext):
 
     # 🔔 Сповіщення адміну (Ірині)
     try:
+        safe_full_name = escape_md(full_name or "—")
+        safe_contacts = escape_md(contacts)
+
         admin_text = (
             f"📅 *Новий запис*\n"
-            f"👤 {full_name or '—'}\n"
-            f"💬 {contacts}\n"
+            f"👤 {safe_full_name}\n"
+            f"💬 {safe_contacts}\n"
             f"💅 {svc[1]}\n"
             f"🕒 {when_str}"
         )
@@ -528,10 +533,13 @@ async def cancel_booking_cb(cq: types.CallbackQuery):
             contact_parts.append(f"Телефон: {phone}")
         contacts = ", ".join(contact_parts) if contact_parts else "—"
 
+        safe_full_name = escape_md(full_name or "—")
+        safe_contacts = escape_md(contacts)
+
         admin_text = (
             f"❌ *Запис скасовано*\n"
-            f"👤 {full_name or '—'}\n"
-            f"💬 {contacts}\n"
+            f"👤 {safe_full_name}\n"
+            f"💬 {safe_contacts}\n"
             f"💅 {svc[1]}\n"
             f"🕒 {when_str}"
         )
